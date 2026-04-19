@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OrangeAI – Predict Yield</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --orange:     #F97316;
+      --orange-dark:#C2410C;
+      --orange-lite:#FED7AA;
+      --green:      #15803D;
+      --green-lite: #DCFCE7;
+      --bg:         #FFFBF5;
+      --dark:       #1C1208;
+      --mid:        #78350F;
+      --text:       #44260A;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+    nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 60px;
+      background: rgba(255,251,245,0.95);
+      border-bottom: 1px solid #F5D0A0;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 900; color: var(--orange-dark); text-decoration: none; }
+    .logo span { color: var(--green); }
+    .back-btn {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--mid); text-decoration: none;
+      font-weight: 500; font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--orange); }
+
+    .page-header {
+      background: linear-gradient(135deg, #FFF7ED 0%, #FFFBF5 100%);
+      padding: 48px 60px 32px;
+      border-bottom: 1px solid #F5D0A0;
+    }
+    .page-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2rem; font-weight: 900;
+      color: var(--dark); margin-bottom: 8px;
+    }
+    .page-header p { color: var(--mid); font-size: 1rem; }
+
+    .main { display: grid; grid-template-columns: 1fr 380px; gap: 32px; padding: 40px 60px; max-width: 1200px; margin: 0 auto; }
+
+    /* FORM */
+    .form-card {
+      background: #fff; border: 1px solid #F5D0A0;
+      border-radius: 20px; padding: 36px;
+    }
+    .form-section { margin-bottom: 28px; }
+    .form-section-title {
+      font-weight: 600; font-size: 0.85rem;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--orange); margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--orange-lite);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.85rem; font-weight: 500; color: var(--mid); }
+    input, select {
+      padding: 11px 14px;
+      border: 1.5px solid #F5D0A0;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem; color: var(--dark);
+      background: var(--bg);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px #F9731620;
+    }
+    input::placeholder { color: #C4A882; }
+
+    .hint { font-size: 0.75rem; color: #C4A882; }
+
+    .predict-btn {
+      width: 100%; padding: 16px;
+      background: var(--orange); color: #fff;
+      border: none; border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1.05rem; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px #F9731640;
+      margin-top: 8px;
+    }
+    .predict-btn:hover {
+      background: var(--orange-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px #F9731650;
+    }
+    .predict-btn:disabled { background: #F5D0A0; cursor: not-allowed; transform: none; }
+
+    /* RESULT PANEL */
+    .result-panel { display: flex; flex-direction: column; gap: 20px; }
+
+    .result-card {
+      background: #fff; border: 1px solid #F5D0A0;
+      border-radius: 20px; padding: 28px;
+    }
+    .result-card h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem; color: var(--dark);
+      margin-bottom: 20px;
+    }
+
+    .result-box {
+      background: linear-gradient(135deg, var(--orange-dark), var(--orange));
+      border-radius: 14px; padding: 24px;
+      text-align: center; color: #fff;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .result-box.show { display: block; animation: fadeUp 0.4s ease; }
+    .result-label { font-size: 0.82rem; opacity: 0.85; margin-bottom: 6px; }
+    .result-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem; font-weight: 900; line-height: 1;
+    }
+    .result-unit { font-size: 0.85rem; opacity: 0.8; margin-top: 4px; }
+
+    .model-results { display: flex; flex-direction: column; gap: 12px; }
+    .model-result {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px;
+      background: var(--bg); border-radius: 10px;
+      border: 1px solid #F5D0A0;
+    }
+    .model-name { font-size: 0.88rem; font-weight: 500; color: var(--mid); }
+    .model-value { font-weight: 700; color: var(--orange-dark); font-size: 1rem; }
+
+    .waiting {
+      text-align: center; padding: 40px 20px;
+      color: #C4A882;
+    }
+    .waiting-icon { font-size: 3rem; margin-bottom: 12px; }
+    .waiting p { font-size: 0.9rem; line-height: 1.6; }
+
+    /* INFO CARDS */
+    .info-card {
+      background: var(--green-lite);
+      border: 1px solid #BBF7D0;
+      border-radius: 16px; padding: 20px;
+    }
+    .info-card h4 {
+      font-size: 0.85rem; font-weight: 600;
+      color: var(--green); margin-bottom: 10px;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .info-item {
+      display: flex; justify-content: space-between;
+      font-size: 0.83rem; color: #166534;
+      padding: 4px 0;
+      border-bottom: 1px solid #BBF7D080;
+    }
+    .info-item:last-child { border: none; }
+
+    .loading {
+      display: none; text-align: center;
+      padding: 20px; color: var(--orange);
+    }
+    .loading.show { display: block; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--orange-lite);
+      border-top-color: var(--orange);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .error-box {
+      background: #FEE2E2; border: 1px solid #FECACA;
+      border-radius: 10px; padding: 14px 16px;
+      color: #B91C1C; font-size: 0.88rem;
+      display: none;
+    }
+    .error-box.show { display: block; }
+
+    /* FEEDBACK CARD */
+    .feedback-card {
+      background: #fff; border: 1px solid #F5D0A0;
+      border-radius: 16px; padding: 24px;
+      animation: fadeUp 0.4s ease;
+    }
+    .feedback-card h4 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem; color: var(--dark);
+      margin-bottom: 6px;
+    }
+    .feedback-sub {
+      font-size: 0.85rem; color: var(--mid);
+      margin-bottom: 16px;
+    }
+    .stars {
+      display: flex; gap: 8px;
+      margin-bottom: 8px;
+    }
+    .star {
+      font-size: 2rem; cursor: pointer;
+      color: #F5D0A0;
+      transition: color 0.15s, transform 0.15s;
+    }
+    .star:hover, .star.active { color: #F59E0B; transform: scale(1.15); }
+    .rating-label {
+      font-size: 0.82rem; color: var(--mid);
+      margin-bottom: 14px;
+    }
+    textarea {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid #F5D0A0;
+      border-radius: 10px; resize: none; height: 90px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem; color: var(--dark);
+      background: var(--bg); outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 12px;
+    }
+    textarea:focus { border-color: var(--orange); }
+    textarea::placeholder { color: #C4A882; }
+    .feedback-btn {
+      width: 100%; padding: 12px;
+      background: var(--green); color: #fff;
+      border: none; border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .feedback-btn:hover { background: #166534; transform: translateY(-1px); }
+    .feedback-success {
+      background: var(--green-lite); border: 1px solid #BBF7D0;
+      border-radius: 10px; padding: 12px;
+      color: var(--green); font-size: 0.88rem;
+      text-align: center; margin-top: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; padding: 24px; }
+      nav, .page-header { padding: 16px 24px; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">Orange<span>AI</span></a>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <span style="font-size:0.9rem; color:var(--mid);">👤 {{ user_name }}</span>
+    <a href="/logout" style="font-size:0.88rem; color:var(--mid); text-decoration:none; font-weight:500; padding:8px 16px; border:1.5px solid #F5D0A0; border-radius:50px; transition:all 0.2s;">Logout</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <h1>🍊 Predict Orange Yield</h1>
+  <p>Enter your farm details below to get an AI-powered yield prediction</p>
+</div>
+
+<div class="main">
+
+  <!-- FORM -->
+  <div class="form-card">
+
+    <div class="form-section">
+      <div class="form-section-title">🌿 Orange Variety & Farm Info</div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Orange Variety</label>
+          <select id="orange_variety">
+            <option value="">-- Select Variety --</option>
+            <option>Nagpur Mandarin</option>
+            <option>Coorg Mandarin</option>
+            <option>Kinnow</option>
+            <option>Khasi Mandarin</option>
+            <option>Sikkim Mandarin</option>
+            <option>Darjeeling Mandarin</option>
+            <option>Sathgudi</option>
+            <option>Mudkhed Mandarin</option>
+            <option>Butwal Mandarin</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Farm Size (Hectares)</label>
+          <input type="number" id="farm_size" placeholder="e.g. 2.5" step="0.1" min="0.1"/>
+        </div>
+        <div class="form-group">
+          <label>Tree Age (Years)</label>
+          <input type="number" id="tree_age" placeholder="e.g. 8" min="4" max="20"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">🌤️ Weather Conditions</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Temperature (°C)</label>
+          <input type="number" id="temperature" placeholder="e.g. 28" step="0.1" min="2" max="50"/>
+        </div>
+        <div class="form-group">
+          <label>Rainfall (mm)</label>
+          <input type="number" id="rainfall" placeholder="e.g. 750" step="1" min="500" max="2000"/>
+        </div>
+        <div class="form-group">
+          <label>Humidity (%)</label>
+          <input type="number" id="humidity" placeholder="e.g. 65" min="45" max="90"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">🌱 Soil & Fertilizer</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Soil pH</label>
+          <input type="number" id="soil_ph" placeholder="e.g. 6.5" step="0.1" min="4.0" max="9.0"/>
+        </div>
+        <div class="form-group">
+          <label>Nitrogen (kg/ha)</label>
+          <input type="number" id="nitrogen" placeholder="e.g. 200" step="1" min="100" max="300"/>
+        </div>
+        <div class="form-group">
+          <label>Phosphorus (kg/ha)</label>
+          <input type="number" id="phosphorus" placeholder="e.g. 75" step="1" min="30" max="130"/>
+        </div>
+        <div class="form-group">
+          <label>Potassium (kg/ha)</label>
+          <input type="number" id="potassium" placeholder="e.g. 160" step="1" min="77" max="233"/>
+        </div>
+      </div>
+    </div>
+
+    <button class="predict-btn" onclick="predict()">🍊 Predict Yield Now</button>
+  </div>
+
+  <!-- RESULT PANEL -->
+  <div class="result-panel">
+
+    <div class="result-card">
+      <h3>Prediction Result</h3>
+
+      <!-- Waiting state -->
+      <div class="waiting" id="waiting">
+        <div class="waiting-icon">🍊</div>
+        <p>Fill in your farm details and click <strong>Predict Yield</strong> to see the result!</p>
+      </div>
+
+      <!-- Loading -->
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Analyzing farm data...</p>
+      </div>
+
+      <!-- Error -->
+      <div class="error-box" id="error"></div>
+
+      <!-- Result -->
+      <div class="result-box" id="result-box">
+        <div class="result-label">Predicted Yield</div>
+        <div class="result-value" id="avg-result">--</div>
+        <div class="result-unit">Tonnes per Hectare</div>
+      </div>
+
+      <div class="model-results" id="model-results" style="display:none">
+        <div class="model-result">
+          <span class="model-name">🌳 Random Forest</span>
+          <span class="model-value" id="dt-result">--</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Card -->
+    <div class="info-card">
+      <h4>📊 Model Information</h4>
+      <div class="info-item"><span>Model Used</span><span>Random Forest 🌳</span></div>
+      <div class="info-item"><span>Accuracy</span><span>70.6%</span></div>
+      <div class="info-item"><span>Training Samples</span><span>999 rows</span></div>
+      <div class="info-item"><span>Varieties Covered</span><span>9 Indian</span></div>
+      <div class="info-item"><span>Total Trees</span><span>50 trees</span></div>
+    </div>
+
+    <!-- Feedback Card -->
+    <div class="feedback-card" id="feedback-section" style="display:none">
+      <h4>💬 Rate This Prediction</h4>
+      <p class="feedback-sub">How accurate was this prediction?</p>
+
+      <!-- Star Rating -->
+      <div class="stars" id="stars">
+        <span class="star" onclick="setRating(1)">★</span>
+        <span class="star" onclick="setRating(2)">★</span>
+        <span class="star" onclick="setRating(3)">★</span>
+        <span class="star" onclick="setRating(4)">★</span>
+        <span class="star" onclick="setRating(5)">★</span>
+      </div>
+      <p class="rating-label" id="rating-label">Click a star to rate</p>
+
+      <!-- Feedback Text -->
+      <textarea id="feedback-text" placeholder="Write your feedback here... (optional)"></textarea>
+
+      <!-- Submit Button -->
+      <button class="feedback-btn" onclick="submitFeedback()">📩 Submit Feedback</button>
+
+      <!-- Success Message -->
+      <div class="feedback-success" id="feedback-success" style="display:none">
+        ✅ Thank you for your feedback!
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+async function predict() {
+  // Get all values
+  const variety     = document.getElementById('orange_variety').value;
+  const year        = "2026";
+  const temperature = document.getElementById('temperature').value;
+  const rainfall    = document.getElementById('rainfall').value;
+  const humidity    = document.getElementById('humidity').value;
+  const soil_ph     = document.getElementById('soil_ph').value;
+  const nitrogen    = document.getElementById('nitrogen').value;
+  const phosphorus  = document.getElementById('phosphorus').value;
+  const potassium   = document.getElementById('potassium').value;
+  const tree_age    = document.getElementById('tree_age').value;
+  const farm_size   = document.getElementById('farm_size').value;
+
+  // Validate
+  if (!variety || !temperature || !rainfall || !humidity ||
+      !soil_ph || !nitrogen || !phosphorus || !potassium ||
+      !tree_age || !farm_size) {
+    showError('⚠️ Please fill in all fields before predicting!');
+    return;
+  }
+
+  // Check limits
+  const limits = {
+    temperature : { min: 2,   max: 50,   name: 'Temperature' },
+    rainfall    : { min: 500, max: 2000, name: 'Rainfall' },
+    humidity    : { min: 45,  max: 90,   name: 'Humidity' },
+    soil_ph     : { min: 4.0, max: 9.0,  name: 'Soil pH' },
+    nitrogen    : { min: 100, max: 300,  name: 'Nitrogen' },
+    phosphorus  : { min: 30,  max: 130,  name: 'Phosphorus' },
+    potassium   : { min: 77,  max: 233,  name: 'Potassium' },
+  };
+  const values = { temperature, rainfall, humidity, soil_ph, nitrogen, phosphorus, potassium };
+  for (const [key, limit] of Object.entries(limits)) {
+    const val = parseFloat(values[key]);
+    if (val < limit.min || val > limit.max) {
+      showError(`⚠️ ${limit.name} must be between ${limit.min} and ${limit.max}!`);
+      return;
+    }
+  }
+
+  // Show loading
+  showLoading();
+
+  try {
+    const response = await fetch('/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orange_variety: variety,
+        year, temperature, rainfall, humidity,
+        soil_ph, nitrogen, phosphorus, potassium,
+        tree_age, farm_size
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      showResult(data);
+    } else {
+      showError('❌ Error: ' + data.message);
+    }
+  } catch (err) {
+    showError('❌ Cannot connect to server. Make sure app.py is running!');
+  }
+}
+
+function showLoading() {
+  document.getElementById('waiting').style.display      = 'none';
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('error').classList.remove('show');
+  document.getElementById('result-box').classList.remove('show');
+  document.getElementById('model-results').style.display = 'none';
+}
+
+function showResult(data) {
+  document.getElementById('loading').classList.remove('show');
+  document.getElementById('avg-result').textContent  = data.dt_prediction + ' t/ha';
+  document.getElementById('dt-result').textContent   = data.dt_prediction + ' t/ha';
+  document.getElementById('result-box').classList.add('show');
+  document.getElementById('model-results').style.display = 'flex';
+  // Show feedback section after prediction
+  document.getElementById('feedback-section').style.display = 'block';
+  currentPrediction = data.dt_prediction;
+}
+
+// ── Feedback & Rating ──────────────────────────────────────
+let selectedRating = 0;
+let currentPrediction = 0;
+const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+
+function setRating(val) {
+  selectedRating = val;
+  const stars = document.querySelectorAll('.star');
+  stars.forEach((s, i) => {
+    s.classList.toggle('active', i < val);
+  });
+  document.getElementById('rating-label').textContent =
+    ratingLabels[val] + ' (' + val + '/5)';
+}
+
+async function submitFeedback() {
+  if (selectedRating === 0) {
+    alert('⚠️ Please select a star rating!'); return;
+  }
+  const message = document.getElementById('feedback-text').value.trim();
+  if (!message) {
+    alert('⚠️ Please write a feedback message!'); return;
+  }
+
+  try {
+    const res = await fetch('/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rating : selectedRating,
+        message: message
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      document.getElementById('feedback-success').style.display = 'block';
+      document.querySelector('.feedback-btn').style.display = 'none';
+    } else {
+      alert('❌ ' + data.message);
+    }
+  } catch (e) {
+    alert('❌ Could not submit feedback!');
+  }
+}
+
+function showError(msg) {
+  document.getElementById('loading').classList.remove('show');
+  document.getElementById('waiting').style.display = 'none';
+  const err = document.getElementById('error');
+  err.textContent = msg;
+  err.classList.add('show');
+}
+</script>
+</body>
+</html>

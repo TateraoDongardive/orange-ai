@@ -1,0 +1,63 @@
+/* ============================================================
+   OrangeAI - Language Switcher CSS
+   Add this inside <style> tag in index.html and predict.html
+   ============================================================ */
+
+/* Language Dropdown */
+.lang-dropdown {
+  position: relative;
+  z-index: 200;
+}
+.lang-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  background: #fff;
+  border: 1.5px solid #F5D0A0;
+  border-radius: 50px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  color: #78350F;
+  font-weight: 500;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.lang-btn:hover {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px #F9731615;
+}
+.lang-btn::after {
+  content: '▾';
+  font-size: 0.75rem;
+  color: #F97316;
+}
+.lang-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #F5D0A0;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px #F9731620;
+  padding: 8px;
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.lang-dropdown.open .lang-menu { display: block; animation: fadeUp 0.2s ease; }
+.lang-option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
+  color: #44260A;
+}
+.lang-option:hover { background: #FFF7ED; }
+.lang-option.active { background: #FED7AA; font-weight: 600; }
+.lang-flag { font-size: 1rem; }
+.lang-native { flex: 1; }
